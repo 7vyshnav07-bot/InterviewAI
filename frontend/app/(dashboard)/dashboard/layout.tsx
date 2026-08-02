@@ -2,6 +2,7 @@
 
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import Navbar from "@/components/layout/Navbar";
 
 export default function DashboardLayout({
   children,
@@ -13,7 +14,11 @@ export default function DashboardLayout({
       <AppSidebar />
 
       <SidebarInset>
-        <main className="p-8">{children}</main>
+        <Navbar />
+
+        <main className="p-8">
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );
