@@ -1,8 +1,13 @@
 from fastapi import FastAPI
 
+from app.db.database import Base, engine
+
+from app.models.user import User
+
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
     title="InterviewAI API",
-    description="Backend API for the AI Interview Coach",
     version="1.0.0"
 )
 
@@ -10,12 +15,12 @@ app = FastAPI(
 @app.get("/")
 def root():
     return {
-        "message": "Welcome to InterviewAI 🚀"
+        "message": "InterviewAI Backend Running 🚀"
     }
 
 
 @app.get("/health")
-def health_check():
+def health():
     return {
         "status": "healthy"
     }
