@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String
-
+from sqlalchemy.orm import relationship
 from app.db.database import Base
 
 
@@ -13,3 +13,9 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
 
     hashed_password = Column(String, nullable=False)
+
+    resumes = relationship(
+    "Resume",
+    back_populates="user",
+    cascade="all, delete",
+)

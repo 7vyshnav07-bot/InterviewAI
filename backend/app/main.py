@@ -1,8 +1,9 @@
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.routes.interview import router as interview_router
 from fastapi import FastAPI
 from app.api.routes.users import router as users_router
 from app.api.routes.auth import router as auth_router
-
+from app.api.routes.resume import router as resume_router
 app = FastAPI(
     title="InterviewAI API",
     version="1.0.0",
@@ -20,7 +21,8 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(users_router)
-
+app.include_router(resume_router)
+app.include_router(interview_router)
 @app.get("/")
 def root():
     return {

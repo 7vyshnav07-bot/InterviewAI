@@ -1,6 +1,7 @@
 "use client";
-
+import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   FileText,
@@ -8,12 +9,14 @@ import {
   BarChart3,
   Settings,
   BrainCircuit,
+  LogOut,
 } from "lucide-react";
 
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
+  SidebarFooter,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -48,6 +51,13 @@ const items = [
 ];
 
 export function AppSidebar() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    router.push("/login");
+  };
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
@@ -61,7 +71,10 @@ export function AppSidebar() {
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton render={<Link href={item.url} />}>
+              <SidebarMenuButton
+  render={<Link href={item.url} />}
+  isActive={pathname === item.url}
+>
                 <item.icon />
                 <span>{item.title}</span>
               </SidebarMenuButton>
@@ -69,6 +82,17 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handleLogout}>
+              <LogOut />
+              <span>Logout</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -23,6 +23,9 @@ def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
+    print("=" * 60)
+    print("TOKEN:", token)
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -35,15 +38,21 @@ def get_current_user(
             algorithms=[settings.ALGORITHM],
         )
 
+        print("PAYLOAD:", payload)
+
         email = payload.get("sub")
+        print("EMAIL:", email)
 
         if email is None:
             raise credentials_exception
 
-    except JWTError:
+    except Exception as e:
+        print("JWT ERROR:", repr(e))
         raise credentials_exception
 
     user = get_user_by_email(db, email)
+
+    print("USER:", user)
 
     if user is None:
         raise credentials_exception

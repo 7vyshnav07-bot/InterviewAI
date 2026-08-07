@@ -5,6 +5,12 @@ import {
   RegisterRequest,
 } from "@/types/auth";
 
+export type RegisterResponse = {
+  id: number;
+  name: string;
+  email: string;
+};
+
 export const login = async (
   data: LoginRequest
 ): Promise<LoginResponse> => {
@@ -12,9 +18,9 @@ export const login = async (
   return response.data;
 };
 
-export const register = async (
+export const registerUser = async (
   data: RegisterRequest
-) => {
+): Promise<RegisterResponse> => {
   const response = await api.post("/auth/register", data);
   return response.data;
 };
