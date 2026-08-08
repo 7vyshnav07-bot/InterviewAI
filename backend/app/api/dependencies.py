@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jose import jwt
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -8,11 +8,14 @@ from app.db.database import SessionLocal
 from app.services.auth_service import get_user_by_email
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/auth/login"
+)
 
 
 def get_db():
     db = SessionLocal()
+
     try:
         yield db
     finally:
@@ -23,9 +26,6 @@ def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
-    print("=" * 60)
-    print("TOKEN:", token)
-
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -38,10 +38,7 @@ def get_current_user(
             algorithms=[settings.ALGORITHM],
         )
 
-        print("PAYLOAD:", payload)
-
         email = payload.get("sub")
-        print("EMAIL:", email)
 
         if email is None:
             raise credentials_exception
@@ -51,8 +48,6 @@ def get_current_user(
         raise credentials_exception
 
     user = get_user_by_email(db, email)
-
-    print("USER:", user)
 
     if user is None:
         raise credentials_exception

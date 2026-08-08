@@ -14,24 +14,26 @@ export default function InterviewPage() {
   const [loading, setLoading] = useState(false);
 
   const handleStart = async () => {
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const data = await generateInterview({
-        role,
-        difficulty,
-        count: questionCount,
-        types: [interviewType],
-      });
+    const data = await generateInterview({
+      role,
+      difficulty,
+      count: questionCount,
+      types: [interviewType],
+    });
 
-      router.push(`/interview/session/${data.interview_id}`);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to generate interview.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    router.push(
+      `/interview/session/${data.interview_id}`
+    );
+  } catch (err) {
+    console.error(err);
+    alert("Failed to generate interview.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="mx-auto max-w-4xl p-8">
