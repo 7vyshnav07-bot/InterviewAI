@@ -1,10 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
 
-from app.schemas.user import UserCreate, UserResponse
-from app.schemas.auth import LoginRequest, Token
+from app.schemas.user import (
+    UserCreate,
+    UserResponse,
+)
+
+from app.schemas.auth import Token
 
 from app.services.auth_service import (
     create_user,
@@ -12,16 +22,30 @@ from app.services.auth_service import (
     login_user,
 )
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+router = APIRouter(
+    prefix="/auth",
+    tags=["Authentication"],
+)
+
+
+# ============================================================
+# REGISTER
+# ============================================================
 
 @router.post(
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def register(user: UserCreate, db: Session = Depends(get_db)):
-    existing_user = get_user_by_email(db, user.email)
+def register(
+    user: UserCreate,
+    db: Session = Depends(get_db),
+):
+    existing_user = get_user_by_email(
+        db,
+        user.email,
+    )
 
     if existing_user:
         raise HTTPException(
@@ -29,20 +53,38 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
             detail="Email already registered",
         )
 
-    return create_user(db, user)
+    return create_user(
+        db,
+        user,
+    )
 
+
+# ============================================================
+# LOGIN
+# ============================================================
 
 @router.post(
     "/login",
     response_model=Token,
 )
 def login(
-    credentials: LoginRequest,
+    credentials: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
+    """
+    Login using OAuth2 password form.
+
+    Swagger sends:
+
+        username=<email>
+        password=<password>
+
+    We use the username field as the user's email.
+    """
+
     token = login_user(
         db,
-        credentials.email,
+        credentials.username,
         credentials.password,
     )
 
@@ -50,6 +92,9 @@ def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
+            headers={
+                "WWW-Authenticate": "Bearer"
+            },
         )
 
     return token

@@ -1,5 +1,63 @@
 import api from "@/lib/api";
 
+// ============================================================
+// INTERVIEW DASHBOARD
+// ============================================================
+
+export interface DashboardStats {
+  total_interviews: number;
+
+  average_score: number | null;
+
+  strongest_skill: string | null;
+  strongest_score: number | null;
+
+  weakest_skill: string | null;
+  weakest_score: number | null;
+
+  total_questions: number;
+  answered_questions: number;
+  evaluated_questions: number;
+
+  score_history: {
+    interview_id: number;
+    role: string;
+    difficulty: string;
+    score: number;
+    completed_at: string | null;
+  }[];
+
+  skill_scores: {
+    skill: string;
+    score: number;
+    questions: number;
+  }[];
+
+  recent_interviews: {
+    id: number;
+    role: string;
+    difficulty: string;
+    score: number | null;
+    total_questions: number;
+    answered_questions: number;
+    completed_at: string | null;
+  }[];
+}
+
+
+// ============================================================
+// GET INTERVIEW DASHBOARD
+// ============================================================
+
+export const getInterviewDashboard =
+  async (): Promise<DashboardStats> => {
+
+    const response = await api.get(
+      "/interview/dashboard"
+    );
+
+    return response.data;
+  };
 export interface InterviewRequest {
   role: string;
   difficulty: string;
