@@ -44,20 +44,31 @@ export interface DashboardStats {
   }[];
 }
 
+// ============================================================
+// AI PERFORMANCE INSIGHTS
+// ============================================================
+
+export interface AIInsightData {
+  summary: string;
+  biggest_strength: string;
+  biggest_weakness: string;
+  answer_pattern: string;
+  practice_focus: string;
+  action_plan: string[];
+  recommended_questions: string[];
+  answer_improvement: string;
+}
+export interface PerformanceInsights {
+  average_score: number;
+  strongest_skill: string | null;
+  weakest_skill: string | null;
+  insights: AIInsightData;
+}
 
 // ============================================================
-// GET INTERVIEW DASHBOARD
+// INTERVIEW REQUEST
 // ============================================================
 
-export const getInterviewDashboard =
-  async (): Promise<DashboardStats> => {
-
-    const response = await api.get(
-      "/interview/dashboard"
-    );
-
-    return response.data;
-  };
 export interface InterviewRequest {
   role: string;
   difficulty: string;
@@ -65,11 +76,45 @@ export interface InterviewRequest {
   count: number;
 }
 
+// ============================================================
+// EVALUATION REQUEST
+// ============================================================
+
 export interface EvaluationRequest {
   interview_id: number;
   question_id: number;
   answer: string;
 }
+
+// ============================================================
+// GET INTERVIEW DASHBOARD
+// ============================================================
+
+export const getInterviewDashboard =
+  async (): Promise<DashboardStats> => {
+    const response = await api.get(
+      "/interview/dashboard"
+    );
+
+    return response.data;
+  };
+
+// ============================================================
+// GET AI PERFORMANCE INSIGHTS
+// ============================================================
+
+export const getPerformanceInsights =
+  async (): Promise<PerformanceInsights> => {
+    const response = await api.get(
+      "/interview/performance-insights"
+    );
+
+    return response.data;
+  };
+
+// ============================================================
+// GENERATE INTERVIEW
+// ============================================================
 
 export const generateInterview = async (
   data: InterviewRequest
@@ -82,6 +127,10 @@ export const generateInterview = async (
   return response.data;
 };
 
+// ============================================================
+// GET SINGLE INTERVIEW
+// ============================================================
+
 export const getInterview = async (
   id: string
 ) => {
@@ -91,6 +140,10 @@ export const getInterview = async (
 
   return response.data;
 };
+
+// ============================================================
+// EVALUATE ANSWER
+// ============================================================
 
 export const evaluateAnswer = async (
   data: EvaluationRequest
@@ -102,6 +155,10 @@ export const evaluateAnswer = async (
 
   return response.data;
 };
+
+// ============================================================
+// TRANSCRIBE AUDIO
+// ============================================================
 
 export const transcribeAudio = async (
   audioBlob: Blob
@@ -119,18 +176,32 @@ export const transcribeAudio = async (
     formData,
     {
       headers: {
-        "Content-Type": "multipart/form-data",
+        "Content-Type":
+          "multipart/form-data",
       },
     }
   );
 
   return response.data;
 };
-export const getInterviewHistory = async () => {
-  const response = await api.get("/interview/history");
 
-  return response.data;
-};
+// ============================================================
+// GET INTERVIEW HISTORY
+// ============================================================
+
+export const getInterviewHistory =
+  async () => {
+    const response = await api.get(
+      "/interview/history"
+    );
+
+    return response.data;
+  };
+
+// ============================================================
+// DELETE INTERVIEW
+// ============================================================
+
 export const deleteInterview = async (
   id: number
 ) => {
@@ -140,6 +211,11 @@ export const deleteInterview = async (
 
   return response.data;
 };
+
+// ============================================================
+// SUBMIT INTERVIEW
+// ============================================================
+
 export const submitInterview = async (
   interviewId: number
 ) => {

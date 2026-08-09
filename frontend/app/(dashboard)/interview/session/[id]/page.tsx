@@ -391,13 +391,9 @@ export default function InterviewSessionPage() {
       try {
         setSubmitting(true);
 
-        await submitInterview(
-          Number(interviewId)
-        );
+      await submitInterview(Number(interviewId));
 
-        router.push(
-  "/interview/history?submitted=true"
-);
+router.push("/dashboard");
       } catch (err) {
         console.error(err);
 

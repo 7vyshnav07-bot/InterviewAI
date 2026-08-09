@@ -1,15 +1,16 @@
 "use client";
-import { usePathname } from "next/navigation";
+
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+
 import {
   LayoutDashboard,
   FileText,
   Mic,
   BarChart3,
   Settings,
-  BrainCircuit,
   LogOut,
+  History,
 } from "lucide-react";
 
 import {
@@ -39,6 +40,11 @@ const items = [
     icon: Mic,
   },
   {
+    title: "History",
+    url: "/history",
+    icon: History,
+  },
+  {
     title: "Results",
     url: "/results",
     icon: BarChart3,
@@ -53,6 +59,7 @@ const items = [
 export function AppSidebar() {
   const router = useRouter();
   const pathname = usePathname();
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     router.push("/login");
@@ -60,39 +67,86 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-2">
-          <BrainCircuit className="h-7 w-7 text-blue-500" />
-          <span className="text-lg font-bold">InterviewAI</span>
+
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
+      <SidebarHeader>
+        <div className="px-2 py-4">
+          <h1 className="text-xl font-bold">
+            InterviewAI
+          </h1>
         </div>
       </SidebarHeader>
 
+      {/* =====================================================
+          NAVIGATION
+      ===================================================== */}
+
       <SidebarContent>
+
         <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-  render={<Link href={item.url} />}
-  isActive={pathname === item.url}
->
-                <item.icon />
-                <span>{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+
+          {items.map((item) => {
+            const isActive =
+              pathname === item.url ||
+              pathname.startsWith(`${item.url}/`);
+
+            return (
+              <SidebarMenuItem key={item.title}>
+
+                <SidebarMenuButton
+                  isActive={isActive}
+                  tooltip={item.title}
+                  onClick={() => {
+                    router.push(item.url);
+                  }}
+                >
+                  <item.icon />
+
+                  <span>
+                    {item.title}
+                  </span>
+
+                </SidebarMenuButton>
+
+              </SidebarMenuItem>
+            );
+          })}
+
         </SidebarMenu>
+
       </SidebarContent>
 
+      {/* =====================================================
+          FOOTER
+      ===================================================== */}
+
       <SidebarFooter>
+
         <SidebarMenu>
+
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout}>
+
+            <SidebarMenuButton
+              onClick={handleLogout}
+              tooltip="Logout"
+            >
               <LogOut />
-              <span>Logout</span>
+
+              <span>
+                Logout
+              </span>
+
             </SidebarMenuButton>
+
           </SidebarMenuItem>
+
         </SidebarMenu>
+
       </SidebarFooter>
+
     </Sidebar>
   );
 }

@@ -9,7 +9,9 @@ from fastapi import (
 )
 
 from sqlalchemy.orm import Session
-
+from app.ai.performance_insights import (
+    generate_performance_insights,
+)
 from app.ai.interview_evaluator import evaluate_answer
 from app.ai.interview_generator import generate_questions
 from app.ai.speech_to_text import transcribe_audio
@@ -752,7 +754,270 @@ def delete_interview(
             interview_id,
     }
 
+# ============================================================
+# AI PERFORMANCE INSIGHTS
+# ============================================================
 
+@router.get("/performance-insights")
+def get_performance_insights(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Generate personalized AI coaching insights
+    from the user's completed interview history.
+    """
+
+    # --------------------------------------------------------
+    # Get completed interviews
+    # --------------------------------------------------------
+
+    interviews = (
+        db.query(Interview)
+        .filter(
+            Interview.user_id == current_user.id,
+            Interview.completed == True,
+        )
+        .order_by(
+            Interview.completed_at.desc()
+        )
+        .all()
+    )
+
+    if not interviews:
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Complete at least one interview "
+                "to generate performance insights."
+            ),
+        )
+
+    # --------------------------------------------------------
+    # Collect evaluated questions
+    # --------------------------------------------------------
+
+    all_questions = []
+
+    for interview in interviews:
+
+        for question in interview.questions:
+
+            if question.score is not None:
+
+                strengths = (
+                    question.strengths
+                    or ""
+                )
+
+                improvements = (
+                    question.improvements
+                    or ""
+                )
+
+                all_questions.append(
+                    {
+                        "question":
+                            question.question,
+
+                        "score":
+                            float(
+                                question.score
+                            ),
+
+                        "feedback":
+                            question.feedback
+                            or "",
+
+                        "strengths":
+                            strengths,
+
+                        "improvements":
+                            improvements,
+                    }
+                )
+
+    if not all_questions:
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "No evaluated questions are "
+                "available yet."
+            ),
+        )
+
+    # --------------------------------------------------------
+    # Calculate average score
+    # --------------------------------------------------------
+
+    average_score = (
+        sum(
+            question["score"]
+            for question in all_questions
+        )
+        / len(all_questions)
+    )
+
+    # --------------------------------------------------------
+    # Calculate skill scores
+    #
+    # Question type is used as the skill category.
+    # --------------------------------------------------------
+
+    skill_data = {}
+
+    for interview in interviews:
+
+        for question in interview.questions:
+
+            if question.score is None:
+                continue
+
+            skill = (
+                question.question_type
+                or "General"
+            )
+
+            if skill not in skill_data:
+
+                skill_data[skill] = {
+                    "total": 0,
+                    "count": 0,
+                }
+
+            skill_data[skill]["total"] += (
+                float(question.score)
+            )
+
+            skill_data[skill]["count"] += 1
+
+    skill_scores = []
+
+    for skill, data in skill_data.items():
+
+        score = (
+            data["total"]
+            / data["count"]
+        )
+
+        skill_scores.append(
+            {
+                "skill": skill,
+                "score": score,
+                "questions": data["count"],
+            }
+        )
+
+    skill_scores.sort(
+        key=lambda item: item["score"],
+        reverse=True,
+    )
+
+    strongest_skill = (
+        skill_scores[0]["skill"]
+        if skill_scores
+        else None
+    )
+
+    weakest_skill = (
+        skill_scores[-1]["skill"]
+        if skill_scores
+        else None
+    )
+
+    # --------------------------------------------------------
+    # Interview history
+    # --------------------------------------------------------
+
+    interview_history = []
+
+    for interview in interviews:
+
+        scored = [
+            question
+            for question in interview.questions
+            if question.score is not None
+        ]
+
+        if not scored:
+            continue
+
+        score = (
+            sum(
+                float(question.score)
+                for question in scored
+            )
+            / len(scored)
+        )
+
+        interview_history.append(
+            {
+                "role":
+                    interview.role,
+
+                "difficulty":
+                    interview.difficulty,
+
+                "score":
+                    score,
+            }
+        )
+
+    # --------------------------------------------------------
+    # Generate AI insights
+    # --------------------------------------------------------
+
+    try:
+
+        insights = (
+            generate_performance_insights(
+                role=interviews[0].role,
+                average_score=average_score,
+                strongest_skill=strongest_skill,
+                weakest_skill=weakest_skill,
+                skill_scores=skill_scores,
+                interviews=interview_history,
+                question_feedback=all_questions,
+            )
+        )
+
+    except Exception as e:
+
+        print(
+            "PERFORMANCE INSIGHTS ERROR:",
+            repr(e),
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Failed to generate "
+                "performance insights."
+            ),
+        )
+
+    # --------------------------------------------------------
+    # Return result
+    # --------------------------------------------------------
+
+    return {
+        "average_score":
+            round(
+                average_score,
+                2,
+            ),
+
+        "strongest_skill":
+            strongest_skill,
+
+        "weakest_skill":
+            weakest_skill,
+
+        "insights":
+            insights,
+    }
 # ============================================================
 # GET SINGLE INTERVIEW
 # ============================================================
