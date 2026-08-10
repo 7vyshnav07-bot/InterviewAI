@@ -11,5 +11,8 @@ class UserResponse(BaseModel):
     id: int
     name: str
     email: EmailStr
+    profile_picture: str | None = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True
+    )

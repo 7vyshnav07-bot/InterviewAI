@@ -1,16 +1,14 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import Link from "next/link";
 
 import {
   LayoutDashboard,
   FileText,
   Mic,
-  BarChart3,
+  History,
   Settings,
   LogOut,
-  History,
 } from "lucide-react";
 
 import {
@@ -45,11 +43,6 @@ const items = [
     icon: History,
   },
   {
-    title: "Results",
-    url: "/results",
-    icon: BarChart3,
-  },
-  {
     title: "Settings",
     url: "/settings",
     icon: Settings,
@@ -68,10 +61,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
 
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
-
+      {/* HEADER */}
       <SidebarHeader>
         <div className="px-2 py-4">
           <h1 className="text-xl font-bold">
@@ -80,12 +70,8 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      {/* =====================================================
-          NAVIGATION
-      ===================================================== */}
-
+      {/* NAVIGATION */}
       <SidebarContent>
-
         <SidebarMenu>
 
           {items.map((item) => {
@@ -116,15 +102,10 @@ export function AppSidebar() {
           })}
 
         </SidebarMenu>
-
       </SidebarContent>
 
-      {/* =====================================================
-          FOOTER
-      ===================================================== */}
-
+      {/* FOOTER */}
       <SidebarFooter>
-
         <SidebarMenu>
 
           <SidebarMenuItem>
@@ -144,7 +125,6 @@ export function AppSidebar() {
           </SidebarMenuItem>
 
         </SidebarMenu>
-
       </SidebarFooter>
 
     </Sidebar>

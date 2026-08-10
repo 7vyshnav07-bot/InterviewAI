@@ -1,3 +1,4 @@
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.interview import router as interview_router
 from fastapi import FastAPI
@@ -7,6 +8,11 @@ from app.api.routes.resume import router as resume_router
 app = FastAPI(
     title="InterviewAI API",
     version="1.0.0",
+)
+app.mount(
+    "/uploads",
+    StaticFiles(directory="uploads"),
+    name="uploads",
 )
 app.add_middleware(
     CORSMiddleware,
