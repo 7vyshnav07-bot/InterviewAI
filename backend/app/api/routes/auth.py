@@ -4,8 +4,11 @@ from fastapi import (
     HTTPException,
     status,
 )
+
 from fastapi.security import OAuth2PasswordRequestForm
+
 from pydantic import BaseModel, EmailStr
+
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
@@ -21,11 +24,12 @@ from app.services.auth_service import (
     create_user,
     get_user_by_email,
     login_user,
-    hash_password,
+    create_password_reset_otp,
+    verify_password_reset_otp,
+    reset_password_with_otp,
 )
 
-import secrets
-from datetime import datetime, timedelta, timezone
+from app.services.email_service import send_email
 
 
 router = APIRouter(
@@ -35,15 +39,9 @@ router = APIRouter(
 
 
 # ============================================================
-# TEMPORARY PASSWORD RESET STORAGE
-# ============================================================
-
-password_reset_tokens = {}
-
-
-# ============================================================
 # REGISTER
 # ============================================================
+
 
 @router.post(
     "/register",
@@ -74,6 +72,7 @@ def register(
 # ============================================================
 # LOGIN
 # ============================================================
+
 
 @router.post(
     "/login",
@@ -116,16 +115,29 @@ def login(
 # FORGOT PASSWORD REQUEST
 # ============================================================
 
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
+
+
+# ============================================================
+# VERIFY RESET OTP REQUEST
+# ============================================================
+
+
+class VerifyResetOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str
 
 
 # ============================================================
 # RESET PASSWORD REQUEST
 # ============================================================
 
+
 class ResetPasswordRequest(BaseModel):
-    token: str
+    email: EmailStr
+    otp: str
     new_password: str
     confirm_password: str
 
@@ -134,12 +146,22 @@ class ResetPasswordRequest(BaseModel):
 # FORGOT PASSWORD
 # ============================================================
 
+
 @router.post("/forgot-password")
-def forgot_password(
+async def forgot_password(
     data: ForgotPasswordRequest,
     db: Session = Depends(get_db),
 ):
-    user = get_user_by_email(
+    """
+    Generate a password reset OTP and send it
+    to the user's email.
+    """
+
+    # --------------------------------------------------------
+    # Generate OTP
+    # --------------------------------------------------------
+
+    otp = create_password_reset_otp(
         db,
         data.email,
     )
@@ -148,46 +170,144 @@ def forgot_password(
     # Do not reveal whether the email exists
     # --------------------------------------------------------
 
-    if not user:
+    if otp is None:
         return {
             "message": (
                 "If an account exists with this email, "
-                "a password reset link has been sent."
+                "a password reset OTP has been sent."
             )
         }
 
     # --------------------------------------------------------
-    # Generate secure reset token
+    # Send OTP through email
     # --------------------------------------------------------
 
-    token = secrets.token_urlsafe(32)
+    await send_email(
+        recipient=data.email,
+        subject="InterviewAI Password Reset OTP",
+        body=f"""
+        <div style="
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: auto;
+            padding: 30px;
+            background-color: #0f172a;
+            color: white;
+            border-radius: 12px;
+        ">
 
-    expires_at = (
-        datetime.now(timezone.utc)
-        + timedelta(minutes=15)
+            <h2 style="color: #60a5fa;">
+                InterviewAI Password Reset
+            </h2>
+
+            <p>
+                We received a request to reset the password
+                for your InterviewAI account.
+            </p>
+
+            <p>
+                Your verification code is:
+            </p>
+
+            <div style="
+                margin: 25px 0;
+                padding: 18px;
+                text-align: center;
+                background-color: #1e293b;
+                border-radius: 10px;
+                font-size: 32px;
+                font-weight: bold;
+                letter-spacing: 8px;
+                color: #60a5fa;
+            ">
+                {otp}
+            </div>
+
+            <p>
+                This OTP is valid for
+                <strong>10 minutes</strong>.
+            </p>
+
+            <p style="color: #94a3b8;">
+                If you did not request a password reset,
+                you can safely ignore this email.
+            </p>
+
+            <hr style="
+                border: none;
+                border-top: 1px solid #334155;
+                margin: 25px 0;
+            ">
+
+            <p style="
+                color: #64748b;
+                font-size: 12px;
+            ">
+                InterviewAI
+            </p>
+
+        </div>
+        """,
     )
 
-    password_reset_tokens[token] = {
-        "user_id": user.id,
-        "expires_at": expires_at,
-    }
-
     # --------------------------------------------------------
-    # TEMPORARY DEVELOPMENT VERSION
-    # --------------------------------------------------------
-    #
-    # For now we return the reset token so you can test
-    # the complete flow without configuring email/SMTP.
-    #
-    # Later we will replace this with actual email sending.
+    # Response
     # --------------------------------------------------------
 
     return {
         "message": (
             "If an account exists with this email, "
-            "a password reset link has been sent."
-        ),
-        "reset_token": token,
+            "a password reset OTP has been sent."
+        )
+    }
+
+
+# ============================================================
+# VERIFY RESET OTP
+# ============================================================
+
+
+@router.post("/verify-reset-otp")
+def verify_reset_otp(
+    data: VerifyResetOTPRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Verify the password reset OTP.
+    """
+
+    # --------------------------------------------------------
+    # Validate OTP format
+    # --------------------------------------------------------
+
+    if not data.otp.isdigit() or len(data.otp) != 6:
+        raise HTTPException(
+            status_code=400,
+            detail="OTP must be exactly 6 digits.",
+        )
+
+    # --------------------------------------------------------
+    # Verify OTP
+    # --------------------------------------------------------
+
+    success, message = verify_password_reset_otp(
+        db,
+        data.email,
+        data.otp,
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail=message,
+        )
+
+    # --------------------------------------------------------
+    # Success
+    # --------------------------------------------------------
+
+    return {
+        "message": message,
     }
 
 
@@ -195,45 +315,18 @@ def forgot_password(
 # RESET PASSWORD
 # ============================================================
 
+
 @router.post("/reset-password")
 def reset_password(
     data: ResetPasswordRequest,
     db: Session = Depends(get_db),
 ):
-    # --------------------------------------------------------
-    # Find token
-    # --------------------------------------------------------
-
-    reset_data = password_reset_tokens.get(
-        data.token
-    )
-
-    if not reset_data:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid or expired password reset token.",
-        )
+    """
+    Reset password using email + OTP.
+    """
 
     # --------------------------------------------------------
-    # Check expiration
-    # --------------------------------------------------------
-
-    if (
-        datetime.now(timezone.utc)
-        > reset_data["expires_at"]
-    ):
-        password_reset_tokens.pop(
-            data.token,
-            None,
-        )
-
-        raise HTTPException(
-            status_code=400,
-            detail="Password reset token has expired.",
-        )
-
-    # --------------------------------------------------------
-    # Validate password
+    # Validate password length
     # --------------------------------------------------------
 
     if len(data.new_password) < 8:
@@ -249,57 +342,82 @@ def reset_password(
     # Confirm password
     # --------------------------------------------------------
 
-    if (
-        data.new_password
-        != data.confirm_password
-    ):
+    if data.new_password != data.confirm_password:
         raise HTTPException(
             status_code=400,
             detail="Passwords do not match.",
         )
 
     # --------------------------------------------------------
-    # Find user
+    # Validate OTP format
     # --------------------------------------------------------
 
-    user = (
-        db.query(User)
-        .filter(
-            User.id == reset_data["user_id"]
-        )
-        .first()
-    )
-
-    if not user:
-        password_reset_tokens.pop(
-            data.token,
-            None,
-        )
-
+    if not data.otp.isdigit() or len(data.otp) != 6:
         raise HTTPException(
-            status_code=404,
-            detail="User not found.",
+            status_code=400,
+            detail="OTP must be exactly 6 digits.",
         )
 
     # --------------------------------------------------------
-    # Update password
+    # Reset password
     # --------------------------------------------------------
 
-    user.hashed_password = hash_password(
-        data.new_password
+    success, message = reset_password_with_otp(
+        db,
+        data.email,
+        data.otp,
+        data.new_password,
     )
 
-    db.commit()
-
     # --------------------------------------------------------
-    # Delete token so it cannot be reused
+    # Invalid / expired OTP
     # --------------------------------------------------------
 
-    password_reset_tokens.pop(
-        data.token,
-        None,
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail=message,
+        )
+
+    # --------------------------------------------------------
+    # Success
+    # --------------------------------------------------------
+
+    return {
+        "message": message,
+    }
+
+
+# ============================================================
+# TEST EMAIL
+# ============================================================
+
+
+@router.post("/test-email")
+async def test_email():
+
+    await send_email(
+        recipient="7vyshnav07@gmail.com",
+        subject="InterviewAI Email Test",
+        body="""
+        <div style="
+            font-family: Arial, sans-serif;
+            padding: 30px;
+        ">
+
+            <h2>
+                InterviewAI Email Test 🚀
+            </h2>
+
+            <p>
+                If you're seeing this email,
+                your SMTP configuration is working correctly.
+            </p>
+
+        </div>
+        """,
     )
 
     return {
-        "message": "Password reset successfully."
+        "message": "Test email sent successfully."
     }

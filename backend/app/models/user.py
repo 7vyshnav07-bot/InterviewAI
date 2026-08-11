@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
@@ -6,6 +6,10 @@ from app.db.database import Base
 
 class User(Base):
     __tablename__ = "users"
+
+    # ============================================================
+    # BASIC USER INFORMATION
+    # ============================================================
 
     id = Column(
         Integer,
@@ -30,21 +34,52 @@ class User(Base):
         nullable=False,
     )
 
+    # ============================================================
+    # PROFILE PICTURE
+    # ============================================================
+
     profile_picture = Column(
         String,
         nullable=True,
     )
 
-    reset_token = Column(
-        String(255),
-        nullable=True,
-        unique=True,
+    # ============================================================
+    # EMAIL VERIFICATION
+    # ============================================================
+
+    email_verified = Column(
+        Boolean,
+        default=False,
+        nullable=False,
     )
 
-    reset_token_expires = Column(
+    verification_otp = Column(
+        String(6),
+        nullable=True,
+    )
+
+    verification_otp_expires = Column(
         DateTime(timezone=True),
         nullable=True,
     )
+
+    # ============================================================
+    # PASSWORD RESET OTP
+    # ============================================================
+
+    reset_otp = Column(
+        String(6),
+        nullable=True,
+    )
+
+    reset_otp_expires = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # ============================================================
+    # RELATIONSHIPS
+    # ============================================================
 
     resumes = relationship(
         "Resume",
@@ -57,3 +92,28 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    email_verified = Column(
+    Boolean,
+    default=False,
+    nullable=False,
+)
+
+verification_otp = Column(
+    String(6),
+    nullable=True,
+)
+
+verification_otp_expires = Column(
+    DateTime(timezone=True),
+    nullable=True,
+)
+
+reset_otp = Column(
+    String(6),
+    nullable=True,
+)
+
+reset_otp_expires = Column(
+    DateTime(timezone=True),
+    nullable=True,
+)
