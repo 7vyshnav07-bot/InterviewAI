@@ -40,10 +40,36 @@ def create_user(
         user.password
     )
 
+    # --------------------------------------------------------
+    # Generate email verification OTP
+    # --------------------------------------------------------
+
+    verification_otp = (
+        f"{secrets.randbelow(1_000_000):06d}"
+    )
+
+    # --------------------------------------------------------
+    # OTP expires after 10 minutes
+    # --------------------------------------------------------
+
+    verification_otp_expires = (
+        datetime.now(timezone.utc)
+        + timedelta(minutes=10)
+    )
+
+    # --------------------------------------------------------
+    # Create user
+    # --------------------------------------------------------
+
     db_user = User(
         name=user.name,
         email=user.email,
         hashed_password=hashed_password,
+
+        # Email verification
+        email_verified=False,
+        verification_otp=verification_otp,
+        verification_otp_expires=verification_otp_expires,
     )
 
     db.add(db_user)
@@ -67,8 +93,23 @@ def authenticate_user(
         email,
     )
 
+    # --------------------------------------------------------
+    # User doesn't exist
+    # --------------------------------------------------------
+
     if not user:
         return None
+
+    # --------------------------------------------------------
+    # Email must be verified before login
+    # --------------------------------------------------------
+
+    if not user.email_verified:
+        return None
+
+    # --------------------------------------------------------
+    # Verify password
+    # --------------------------------------------------------
 
     if not verify_password(
         password,
@@ -77,6 +118,8 @@ def authenticate_user(
         return None
 
     return user
+
+
 
 
 # ============================================================
@@ -88,14 +131,40 @@ def login_user(
     email: str,
     password: str,
 ):
-    user = authenticate_user(
+    user = get_user_by_email(
         db,
         email,
-        password,
     )
+
+    # --------------------------------------------------------
+    # User does not exist
+    # --------------------------------------------------------
 
     if not user:
         return None
+
+    # --------------------------------------------------------
+    # Check password
+    # --------------------------------------------------------
+
+    if not verify_password(
+        password,
+        user.hashed_password,
+    ):
+        return None
+
+    # --------------------------------------------------------
+    # Check email verification
+    # --------------------------------------------------------
+
+    if not user.email_verified:
+        return {
+            "error": "EMAIL_NOT_VERIFIED"
+        }
+
+    # --------------------------------------------------------
+    # Create access token
+    # --------------------------------------------------------
 
     access_token = create_access_token(
         data={
@@ -107,6 +176,144 @@ def login_user(
         "access_token": access_token,
         "token_type": "bearer",
     }
+    # --------------------------------------------------------
+    # Require email verification
+    # --------------------------------------------------------
+
+    if not user.email_verified:
+        return {
+            "error": "EMAIL_NOT_VERIFIED",
+        }
+
+    # --------------------------------------------------------
+    # Create access token
+    # --------------------------------------------------------
+
+    access_token = create_access_token(
+        data={
+            "sub": user.email
+        }
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+    }
+# ============================================================
+# VERIFY EMAIL OTP
+# ============================================================
+
+def verify_email_otp(
+    db: Session,
+    email: str,
+    otp: str,
+):
+    user = get_user_by_email(
+        db,
+        email,
+    )
+
+    # --------------------------------------------------------
+    # User not found
+    # --------------------------------------------------------
+
+    if not user:
+        return (
+            False,
+            "Invalid or expired verification OTP.",
+        )
+
+    # --------------------------------------------------------
+    # Already verified
+    # --------------------------------------------------------
+
+    if user.email_verified:
+        return (
+            True,
+            "Email is already verified.",
+        )
+
+    # --------------------------------------------------------
+    # No OTP stored
+    # --------------------------------------------------------
+
+    if not user.verification_otp:
+        return (
+            False,
+            "Invalid or expired verification OTP.",
+        )
+
+    # --------------------------------------------------------
+    # No expiry stored
+    # --------------------------------------------------------
+
+    if not user.verification_otp_expires:
+        return (
+            False,
+            "Invalid or expired verification OTP.",
+        )
+
+    # --------------------------------------------------------
+    # Handle timezone-naive database datetime
+    # --------------------------------------------------------
+
+    expires = user.verification_otp_expires
+
+    if expires.tzinfo is None:
+        expires = expires.replace(
+            tzinfo=timezone.utc
+        )
+
+    # --------------------------------------------------------
+    # Check expiry
+    # --------------------------------------------------------
+
+    current_time = datetime.now(
+        timezone.utc
+    )
+
+    if current_time > expires:
+
+        user.verification_otp = None
+        user.verification_otp_expires = None
+
+        db.commit()
+
+        return (
+            False,
+            "Verification OTP has expired.",
+        )
+
+    # --------------------------------------------------------
+    # Check OTP
+    # --------------------------------------------------------
+
+    if user.verification_otp != otp:
+        return (
+            False,
+            "Invalid verification OTP.",
+        )
+
+    # --------------------------------------------------------
+    # Verify email
+    # --------------------------------------------------------
+
+    user.email_verified = True
+
+    # --------------------------------------------------------
+    # Invalidate verification OTP
+    # --------------------------------------------------------
+
+    user.verification_otp = None
+    user.verification_otp_expires = None
+
+    db.commit()
+    db.refresh(user)
+
+    return (
+        True,
+        "Email verified successfully.",
+    )
 
 
 # ============================================================
@@ -133,7 +340,9 @@ def create_password_reset_otp(
     # Generate secure 6-digit OTP
     # --------------------------------------------------------
 
-    otp = f"{secrets.randbelow(1_000_000):06d}"
+    otp = (
+        f"{secrets.randbelow(1_000_000):06d}"
+    )
 
     # --------------------------------------------------------
     # OTP expires after 10 minutes
@@ -202,7 +411,7 @@ def verify_password_reset_otp(
         )
 
     # --------------------------------------------------------
-    # Handle timezone-naive datetime
+    # Handle timezone-naive database datetime
     # --------------------------------------------------------
 
     expires = user.reset_otp_expires
@@ -263,6 +472,68 @@ def reset_password_with_otp(
     new_password: str,
 ):
     # --------------------------------------------------------
+    # Verify OTP
+    # --------------------------------------------------------
+
+    success, message = verify_password_reset_otp(
+        db,
+        email,
+        otp,
+    )
+
+    if not success:
+        return (
+            False,
+            message,
+        )
+
+    # --------------------------------------------------------
+    # Find user
+    # --------------------------------------------------------
+
+    user = get_user_by_email(
+        db,
+        email,
+    )
+
+    if not user:
+        return (
+            False,
+            "User not found.",
+        )
+
+    # --------------------------------------------------------
+    # Update password
+    # --------------------------------------------------------
+
+    user.hashed_password = hash_password(
+        new_password
+    )
+
+    # --------------------------------------------------------
+    # Invalidate OTP
+    # --------------------------------------------------------
+
+    user.reset_otp = None
+    user.reset_otp_expires = None
+
+    # --------------------------------------------------------
+    # Save changes
+    # --------------------------------------------------------
+
+    db.commit()
+    db.refresh(user)
+
+    # --------------------------------------------------------
+    # IMPORTANT:
+    # Always return a tuple
+    # --------------------------------------------------------
+
+    return (
+        True,
+        "Password reset successfully.",
+    )
+    # --------------------------------------------------------
     # Verify OTP first
     # --------------------------------------------------------
 
@@ -278,6 +549,109 @@ def reset_password_with_otp(
             message,
         )
 
+# ============================================================
+# RESEND EMAIL VERIFICATION OTP
+# ============================================================
+
+def resend_verification_otp(
+    db: Session,
+    email: str,
+):
+    # --------------------------------------------------------
+    # Find user
+    # --------------------------------------------------------
+
+    user = get_user_by_email(
+        db,
+        email,
+    )
+
+    if not user:
+        return None, "If an account exists with this email, a new verification OTP has been sent."
+
+    # --------------------------------------------------------
+    # Check whether email is already verified
+    # --------------------------------------------------------
+
+    if user.email_verified:
+        return None, "Email is already verified."
+
+    # --------------------------------------------------------
+    # Check previous OTP cooldown
+    #
+    # verification_otp_expires = OTP creation time + 10 min
+    #
+    # Therefore:
+    #
+    # OTP creation time =
+    # verification_otp_expires - 10 minutes
+    # --------------------------------------------------------
+
+    if user.verification_otp_expires:
+
+        expires = user.verification_otp_expires
+
+        if expires.tzinfo is None:
+            expires = expires.replace(
+                tzinfo=timezone.utc
+            )
+
+        otp_created_at = (
+            expires - timedelta(minutes=10)
+        )
+
+        current_time = datetime.now(
+            timezone.utc
+        )
+
+        seconds_since_creation = (
+            current_time - otp_created_at
+        ).total_seconds()
+
+        # ----------------------------------------------------
+        # 60 second cooldown
+        # ----------------------------------------------------
+
+        if seconds_since_creation < 60:
+
+            remaining = int(
+                60 - seconds_since_creation
+            )
+
+            return (
+                None,
+                f"Please wait {remaining} seconds before requesting another OTP.",
+            )
+
+    # --------------------------------------------------------
+    # Generate new 6-digit OTP
+    # --------------------------------------------------------
+
+    otp = f"{secrets.randbelow(1_000_000):06d}"
+
+    # --------------------------------------------------------
+    # New expiry
+    # --------------------------------------------------------
+
+    expires = (
+        datetime.now(timezone.utc)
+        + timedelta(minutes=10)
+    )
+
+    # --------------------------------------------------------
+    # Store new OTP
+    # --------------------------------------------------------
+
+    user.verification_otp = otp
+    user.verification_otp_expires = expires
+
+    db.commit()
+    db.refresh(user)
+
+    return (
+        otp,
+        "Verification OTP sent successfully.",
+    )
     # --------------------------------------------------------
     # Find user
     # --------------------------------------------------------

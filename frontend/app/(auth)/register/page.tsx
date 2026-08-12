@@ -34,21 +34,32 @@ export default function RegisterPage() {
   // ============================================================
   // REGISTER
   // ============================================================
+const onSubmit = async (data: RegisterForm) => {
+  try {
+    const email = data.email.trim();
 
-  const onSubmit = async (data: RegisterForm) => {
-    try {
-      await registerUser({
-        name: data.name.trim(),
-        email: data.email.trim(),
-        password: data.password,
-      });
+    await registerUser({
+      name: data.name.trim(),
+      email,
+      password: data.password,
+    });
 
-      toast.success("Account created successfully!");
+    // Save email so the verification page knows
+    // which account is being verified.
+    sessionStorage.setItem(
+      "verification_email",
+      email
+    );
 
-      setTimeout(() => {
-        router.push("/login");
-      }, 800);
-    } catch (error: unknown) {
+    toast.success(
+      "Account created! Check your email for the verification OTP."
+    );
+
+    setTimeout(() => {
+      router.push("/verify-email");
+    }, 800);
+
+  } catch (error: unknown) {
       console.error("Registration error:", error);
 
       let message =
@@ -361,13 +372,30 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   placeholder="Create a password"
                   {...register("password", {
-                    required: "Password is required",
-                    minLength: {
-                      value: 8,
-                      message:
-                        "Password must be at least 8 characters",
-                    },
-                  })}
+  required: "Password is required",
+
+  minLength: {
+    value: 8,
+    message:
+      "Password must be at least 8 characters",
+  },
+
+  validate: (value) => {
+    if (!/[A-Z]/.test(value)) {
+      return "Password must contain an uppercase letter";
+    }
+
+    if (!/[a-z]/.test(value)) {
+      return "Password must contain a lowercase letter";
+    }
+
+    if (!/[0-9]/.test(value)) {
+      return "Password must contain a number";
+    }
+
+    return true;
+  },
+})}
                   className={`w-full rounded-xl border bg-slate-800 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-500 ${
                     errors.password
                       ? "border-red-500/60 focus:border-red-500"
@@ -382,9 +410,10 @@ export default function RegisterPage() {
                 )}
 
                 {!errors.password && (
-                  <p className="mt-1.5 text-xs text-slate-500">
-                    Use at least 8 characters.
-                  </p>
+                  <p className="mt-1.5 text-xs leading-5 text-slate-500">
+  Use at least 8 characters with an uppercase letter,
+  lowercase letter, and number.
+</p>
                 )}
 
               </div>

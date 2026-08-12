@@ -158,3 +158,40 @@ export const resetPassword = async (
 
   return response.data;
 };
+export type VerifyEmailResponse = {
+  message: string;
+};
+
+export const verifyEmail = async (
+  data: {
+    email: string;
+    otp: string;
+  }
+): Promise<VerifyEmailResponse> => {
+  const response = await api.post(
+    "/auth/verify-email",
+    data
+  );
+
+  return response.data;
+};
+// ============================================================
+// RESEND VERIFICATION OTP
+// ============================================================
+
+export type ResendVerificationOTPResponse = {
+  message: string;
+};
+
+export const resendVerificationOTP = async (
+  data: {
+    email: string;
+  }
+): Promise<ResendVerificationOTPResponse> => {
+  const response = await api.post(
+    "/auth/resend-verification-otp",
+    data
+  );
+
+  return response.data;
+};

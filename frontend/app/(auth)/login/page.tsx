@@ -1,11 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { toast } from "sonner";
 import { login } from "@/services/authService";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BrainCircuit, ArrowRight, Sparkles } from "lucide-react";
+import {
+  BrainCircuit,
+  ArrowRight,
+  Sparkles,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+} from "lucide-react";
 
 type LoginForm = {
   email: string;
@@ -14,6 +22,23 @@ type LoginForm = {
 
 export default function LoginPage() {
   const router = useRouter();
+
+  // ============================================================
+  // PASSWORD VISIBILITY
+  // ============================================================
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  // ============================================================
+  // UNVERIFIED EMAIL
+  // ============================================================
+
+  const [unverifiedEmail, setUnverifiedEmail] =
+    useState<string | null>(null);
+
+  // ============================================================
+  // FORM
+  // ============================================================
 
   const {
     register,
@@ -27,24 +52,112 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      const response = await login(data);
+      setUnverifiedEmail(null);
+
+      const response = await login({
+        email: data.email.trim(),
+        password: data.password,
+      });
+
+      // --------------------------------------------------------
+      // STORE TOKEN
+      // --------------------------------------------------------
 
       localStorage.setItem(
         "token",
         response.access_token
       );
 
+      // --------------------------------------------------------
+      // SUCCESS
+      // --------------------------------------------------------
+
       toast.success("Login successful!");
 
       router.push("/dashboard");
-    } catch (error) {
-      console.error(error);
 
-      toast.error(
-        "Invalid email or password"
+    } catch (error: unknown) {
+      console.error(
+        "Login error:",
+        error
       );
+
+      let message =
+        "Invalid email or password.";
+
+      let statusCode: number | undefined;
+
+      // --------------------------------------------------------
+      // AXIOS ERROR
+      // --------------------------------------------------------
+
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error
+      ) {
+        const response = (
+          error as {
+            response?: {
+              status?: number;
+              data?: {
+                detail?: string;
+              };
+            };
+          }
+        ).response;
+
+        statusCode = response?.status;
+
+        if (response?.data?.detail) {
+          message = response.data.detail;
+        }
+      }
+
+      // --------------------------------------------------------
+      // UNVERIFIED EMAIL
+      // --------------------------------------------------------
+
+      if (statusCode === 403) {
+        setUnverifiedEmail(
+          data.email.trim()
+        );
+
+        toast.error(
+          "Please verify your email before logging in."
+        );
+
+        return;
+      }
+
+      // --------------------------------------------------------
+      // NORMAL LOGIN ERROR
+      // --------------------------------------------------------
+
+      toast.error(message);
     }
   };
+
+  // ============================================================
+  // GO TO VERIFICATION
+  // ============================================================
+
+  const handleVerifyEmail = () => {
+    if (!unverifiedEmail) {
+      return;
+    }
+
+    sessionStorage.setItem(
+      "verification_email",
+      unverifiedEmail
+    );
+
+    router.push("/verify-email");
+  };
+
+  // ============================================================
+  // PAGE
+  // ============================================================
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-slate-950">
@@ -183,6 +296,43 @@ export default function LoginPage() {
             </div>
 
             {/* ==================================================
+                UNVERIFIED EMAIL MESSAGE
+            ================================================== */}
+
+            {unverifiedEmail && (
+              <div className="mb-6 rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-4">
+
+                <div className="flex gap-3">
+
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-yellow-400" />
+
+                  <div className="flex-1">
+
+                    <p className="text-sm font-semibold text-yellow-300">
+                      Email verification required
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-yellow-200/70">
+                      Please verify your email before
+                      signing in to InterviewAI.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={handleVerifyEmail}
+                      className="mt-3 text-xs font-semibold text-blue-400 transition hover:text-blue-300"
+                    >
+                      Verify email →
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* ==================================================
                 FORM
             ================================================== */}
 
@@ -207,9 +357,17 @@ export default function LoginPage() {
                   type="email"
                   autoComplete="email"
                   placeholder="you@example.com"
+                  disabled={isSubmitting}
                   {...register("email", {
                     required:
                       "Email is required",
+
+                    pattern: {
+                      value:
+                        /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                      message:
+                        "Please enter a valid email address",
+                    },
                   })}
                   className={`w-full rounded-xl border bg-slate-900/70 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-600 ${
                     errors.email
@@ -239,8 +397,6 @@ export default function LoginPage() {
                     Password
                   </label>
 
-                  {/* FORGOT PASSWORD */}
-
                   <Link
                     href="/forgot-password"
                     className="text-xs font-medium text-blue-400 transition hover:text-blue-300"
@@ -250,21 +406,58 @@ export default function LoginPage() {
 
                 </div>
 
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="Enter your password"
-                  {...register("password", {
-                    required:
-                      "Password is required",
-                  })}
-                  className={`w-full rounded-xl border bg-slate-900/70 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-600 ${
-                    errors.password
-                      ? "border-red-500/60 focus:border-red-500"
-                      : "border-white/10 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                  }`}
-                />
+                {/* PASSWORD INPUT */}
+
+                <div className="relative">
+
+                  <input
+                    id="password"
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
+                    disabled={isSubmitting}
+                    {...register("password", {
+                      required:
+                        "Password is required",
+                    })}
+                    className={`w-full rounded-xl border bg-slate-900/70 px-4 py-3.5 pr-12 text-sm text-white outline-none transition placeholder:text-slate-600 ${
+                      errors.password
+                        ? "border-red-500/60 focus:border-red-500"
+                        : "border-white/10 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                    }`}
+                  />
+
+                  {/* SHOW / HIDE */}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowPassword(
+                        (current) => !current
+                      )
+                    }
+                    disabled={isSubmitting}
+                    aria-label={
+                      showPassword
+                        ? "Hide password"
+                        : "Show password"
+                    }
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-500 transition hover:text-slate-300 disabled:opacity-50"
+                  >
+
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+
+                  </button>
+
+                </div>
 
                 {errors.password && (
                   <p className="mt-1.5 text-xs text-red-400">
@@ -285,6 +478,7 @@ export default function LoginPage() {
                 {isSubmitting ? (
                   <>
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+
                     Signing in...
                   </>
                 ) : (

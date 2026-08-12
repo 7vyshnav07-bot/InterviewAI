@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   LineChart,
@@ -28,6 +29,8 @@ type User = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
+
   // ============================================================
   // USER
   // ============================================================
@@ -58,36 +61,56 @@ export default function DashboardPage() {
   const [insightsError, setInsightsError] =
     useState<string | null>(null);
 
-  // ============================================================
-  // LOAD DASHBOARD
-  // ============================================================
-
   useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        const [
-          userData,
-          dashboardData,
-        ] = await Promise.all([
-          getCurrentUser(),
-          getInterviewDashboard(),
-        ]);
+  const token = localStorage.getItem("token");
 
-        setUser(userData);
-        setStats(dashboardData);
-      } catch (error) {
-        console.error(
-          "Failed to load dashboard:",
-          error
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+  // ----------------------------------------------------------
+  // NO TOKEN
+  // ----------------------------------------------------------
 
-    loadDashboard();
-  }, []);
+  if (!token) {
+    router.replace("/login");
+    return;
+  }
 
+  // ----------------------------------------------------------
+  // LOAD DASHBOARD
+  // ----------------------------------------------------------
+
+  const loadDashboard = async () => {
+    try {
+      const [
+        userData,
+        dashboardData,
+      ] = await Promise.all([
+        getCurrentUser(),
+        getInterviewDashboard(),
+      ]);
+
+      setUser(userData);
+      setStats(dashboardData);
+
+    } catch (error) {
+      console.error(
+        "Failed to load dashboard:",
+        error
+      );
+
+      // ------------------------------------------------------
+      // TOKEN MAY BE INVALID / EXPIRED
+      // ------------------------------------------------------
+
+      localStorage.removeItem("token");
+
+      router.replace("/login");
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadDashboard();
+}, [router]);
   // ============================================================
   // AI ASSISTANCE
   // ============================================================
