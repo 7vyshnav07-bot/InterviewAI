@@ -56,11 +56,13 @@ export default function LoginPage() {
     try {
       setUnverifiedEmail(null);
 
-      const response = await login({
-        email: data.email.trim(),
-        password: data.password,
-      });
+    const response = await login({
+  email: data.email.trim(),
+  password: data.password,
+});
 
+console.log("LOGIN RESPONSE:", response);
+console.log("ACCESS TOKEN:", response.access_token);
       // --------------------------------------------------------
       // STORE TOKEN
       // --------------------------------------------------------
