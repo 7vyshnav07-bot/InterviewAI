@@ -1,18 +1,20 @@
 "use client";
 
+import InterviewAILogo from "@/components/InterviewAILogo";
+
 import { useState } from "react";
 import { toast } from "sonner";
 import { login } from "@/services/authService";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+
 import {
-  BrainCircuit,
-  ArrowRight,
-  Sparkles,
   Eye,
   EyeOff,
   ShieldCheck,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
 
 type LoginForm = {
@@ -168,9 +170,15 @@ export default function LoginPage() {
 
       <div className="pointer-events-none absolute inset-0">
 
+        {/* Blue glow */}
+
         <div className="absolute left-[-10%] top-[-10%] h-[400px] w-[400px] rounded-full bg-blue-600/20 blur-[120px]" />
 
+        {/* Purple glow */}
+
         <div className="absolute bottom-[-10%] right-[-10%] h-[450px] w-[450px] rounded-full bg-purple-600/20 blur-[140px]" />
+
+        {/* Cyan center glow */}
 
         <div className="absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[120px]" />
 
@@ -192,25 +200,19 @@ export default function LoginPage() {
 
             <div>
 
-              {/* LOGO */}
+              {/* =================================================
+                  LOGO
+              ================================================= */}
 
-              <div className="flex items-center gap-3">
+              <InterviewAILogo size="md" />
 
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/20">
-
-                  <BrainCircuit className="h-6 w-6 text-white" />
-
-                </div>
-
-                <span className="text-xl font-bold text-white">
-                  InterviewAI
-                </span>
-
-              </div>
-
-              {/* HERO */}
+              {/* =================================================
+                  HERO
+              ================================================= */}
 
               <div className="mt-24">
+
+                {/* BADGE */}
 
                 <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-sm text-blue-300">
 
@@ -220,16 +222,23 @@ export default function LoginPage() {
 
                 </div>
 
+                {/* HEADING */}
+
                 <h1 className="max-w-md text-4xl font-bold leading-tight text-white">
 
                   Prepare smarter.
+
                   <br />
 
-                  <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+
                     Interview better.
+
                   </span>
 
                 </h1>
+
+                {/* DESCRIPTION */}
 
                 <p className="mt-5 max-w-md text-base leading-7 text-slate-400">
 
@@ -243,7 +252,9 @@ export default function LoginPage() {
 
             </div>
 
-            {/* BOTTOM */}
+            {/* =================================================
+                BOTTOM
+            ================================================= */}
 
             <div className="flex items-center gap-2 text-sm text-slate-500">
 
@@ -261,23 +272,19 @@ export default function LoginPage() {
 
           <div className="p-7 sm:p-10">
 
-            {/* MOBILE LOGO */}
+            {/* =================================================
+                MOBILE LOGO
+            ================================================= */}
 
-            <div className="mb-10 flex items-center justify-center gap-3 lg:hidden">
+            <div className="mb-10 flex justify-center lg:hidden">
 
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
-
-                <BrainCircuit className="h-5 w-5 text-white" />
-
-              </div>
-
-              <span className="text-xl font-bold text-white">
-                InterviewAI
-              </span>
+              <InterviewAILogo size="sm" />
 
             </div>
 
-            {/* HEADER */}
+            {/* =================================================
+                HEADER
+            ================================================= */}
 
             <div className="mb-8">
 
@@ -295,11 +302,12 @@ export default function LoginPage() {
 
             </div>
 
-            {/* ==================================================
+            {/* =================================================
                 UNVERIFIED EMAIL MESSAGE
-            ================================================== */}
+            ================================================= */}
 
             {unverifiedEmail && (
+
               <div className="mb-6 rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-4">
 
                 <div className="flex gap-3">
@@ -330,18 +338,21 @@ export default function LoginPage() {
                 </div>
 
               </div>
+
             )}
 
-            {/* ==================================================
+            {/* =================================================
                 FORM
-            ================================================== */}
+            ================================================= */}
 
             <form
               onSubmit={handleSubmit(onSubmit)}
               className="space-y-5"
             >
 
-              {/* EMAIL */}
+              {/* =================================================
+                  EMAIL
+              ================================================= */}
 
               <div>
 
@@ -365,6 +376,7 @@ export default function LoginPage() {
                     pattern: {
                       value:
                         /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+
                       message:
                         "Please enter a valid email address",
                     },
@@ -377,14 +389,18 @@ export default function LoginPage() {
                 />
 
                 {errors.email && (
+
                   <p className="mt-1.5 text-xs text-red-400">
                     {errors.email.message}
                   </p>
+
                 )}
 
               </div>
 
-              {/* PASSWORD */}
+              {/* =================================================
+                  PASSWORD
+              ================================================= */}
 
               <div>
 
@@ -460,14 +476,18 @@ export default function LoginPage() {
                 </div>
 
                 {errors.password && (
+
                   <p className="mt-1.5 text-xs text-red-400">
                     {errors.password.message}
                   </p>
+
                 )}
 
               </div>
 
-              {/* LOGIN BUTTON */}
+              {/* =================================================
+                  LOGIN BUTTON
+              ================================================= */}
 
               <button
                 type="submit"
@@ -476,26 +496,34 @@ export default function LoginPage() {
               >
 
                 {isSubmitting ? (
+
                   <>
+
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
 
                     Signing in...
+
                   </>
+
                 ) : (
+
                   <>
+
                     Sign in
 
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+
                   </>
+
                 )}
 
               </button>
 
             </form>
 
-            {/* ==================================================
+            {/* =================================================
                 REGISTER
-            ================================================== */}
+            ================================================= */}
 
             <div className="my-8 flex items-center gap-4">
 
@@ -522,7 +550,9 @@ export default function LoginPage() {
 
             </p>
 
-            {/* FOOTER */}
+            {/* =================================================
+                FOOTER
+            ================================================= */}
 
             <p className="mt-10 text-center text-xs text-slate-600">
               © {new Date().getFullYear()} InterviewAI
