@@ -6,7 +6,6 @@ import {
   RegisterRequest,
 } from "@/types/auth";
 
-
 // ============================================================
 // REGISTER RESPONSE
 // ============================================================
@@ -17,7 +16,6 @@ export type RegisterResponse = {
   email: string;
 };
 
-
 // ============================================================
 // FORGOT PASSWORD RESPONSE
 // ============================================================
@@ -26,7 +24,6 @@ export type ForgotPasswordResponse = {
   message: string;
 };
 
-
 // ============================================================
 // VERIFY RESET OTP RESPONSE
 // ============================================================
@@ -34,7 +31,6 @@ export type ForgotPasswordResponse = {
 export type VerifyResetOTPResponse = {
   message: string;
 };
-
 
 // ============================================================
 // RESET PASSWORD REQUEST
@@ -47,7 +43,6 @@ export type ResetPasswordRequest = {
   confirm_password: string;
 };
 
-
 // ============================================================
 // RESET PASSWORD RESPONSE
 // ============================================================
@@ -55,7 +50,6 @@ export type ResetPasswordRequest = {
 export type ResetPasswordResponse = {
   message: string;
 };
-
 
 // ============================================================
 // LOGIN
@@ -87,9 +81,14 @@ export const login = async (
     }
   );
 
+  // Temporary debugging
+  console.log(
+    "AUTH LOGIN RESPONSE:",
+    response.data
+  );
+
   return response.data;
 };
-
 
 // ============================================================
 // REGISTER
@@ -105,7 +104,6 @@ export const registerUser = async (
 
   return response.data;
 };
-
 
 // ============================================================
 // FORGOT PASSWORD
@@ -123,7 +121,6 @@ export const forgotPassword = async (
 
   return response.data;
 };
-
 
 // ============================================================
 // VERIFY RESET OTP
@@ -143,7 +140,6 @@ export const verifyResetOTP = async (
   return response.data;
 };
 
-
 // ============================================================
 // RESET PASSWORD
 // ============================================================
@@ -158,6 +154,11 @@ export const resetPassword = async (
 
   return response.data;
 };
+
+// ============================================================
+// VERIFY EMAIL
+// ============================================================
+
 export type VerifyEmailResponse = {
   message: string;
 };
@@ -175,6 +176,7 @@ export const verifyEmail = async (
 
   return response.data;
 };
+
 // ============================================================
 // RESEND VERIFICATION OTP
 // ============================================================
